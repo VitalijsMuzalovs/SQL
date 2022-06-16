@@ -1,0 +1,1 @@
+UPDATE pols SET eur=15.33;
