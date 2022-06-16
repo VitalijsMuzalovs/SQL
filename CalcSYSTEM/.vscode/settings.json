@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "abul.db.elephantsql.com",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "CalcSYSTEM",
+            "database": "aphfgqzl",
+            "username": "aphfgqzl",
+            "password": "E-XRiqulSIwntxQurDLibzk8EAeyalBZ"
+        }
+    ]
+}
