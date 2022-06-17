@@ -1,7 +1,42 @@
 from tkinter import *
 from datetime import datetime
-from click import command
+from tkinter import messagebox
+from tkinter.ttk import Combobox
+import psycopg2.extras
 import psycopg2
+
+
+def connectDB(myFunc):
+    DB_HOST='abul.db.elephantsql.com'
+    DB_NAME='aphfgqzl'
+    DB_USER='aphfgqzl'
+    DB_PASS='E-XRiqulSIwntxQurDLibzk8EAeyalBZ'
+    DB_PORT=5432
+
+    conn=psycopg2.connect(dbname=DB_NAME,user=DB_USER,password=DB_PASS,host=DB_HOST,port=DB_PORT)
+    cur=conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    cur.execute('''CREATE TABLE IF NOT EXISTS orders(id SERIAL,ordNr TEXT PRIMARY KEY,Item_1 FLOAT(2),Item_2 FLOAT(2),Item_3 FLOAT(2),Item_4 FLOAT(2),Costs FLOAT(2),Tips FLOAT(2),Tax FLOAT(2),SubTotal FLOAT(2),Total FLOAT(2));
+     ''')
+    myFunc(cur)
+        
+    conn.commit()
+    conn.close()
+    cur.close
+
+
+def getTotalRecs():
+    def myFn(cur):
+        global recCount
+        cur.execute('''SELECT count(id) FROM orders ''')
+        recCount = cur.fetchone()
+        return recCount
+    connectDB(myFn)
+    return recCount
+
+def lb_count_refresh():
+    lb_count['text']=f'Record count: {getTotalRecs()}'
+
 
 def cmdRESET():
     txtOrdNr.delete(0,END)
@@ -15,16 +50,26 @@ def cmdRESET():
     txt_subtotal.delete(0,END)
     txt_total.delete(0,END)
 
+def btTotal():
+    if txt_tips.get() is None: 
+        txt_tips.delete(0,END)
+        txt_tips.insert(0,'0')
+        messagebox('OK','DB is empty!')
+    else:
+        txt_tips.delete(0,END)
+        txt_tips.insert(0,'0')
+
+
 
 
 win=Tk()
 win.title('ORDERING System')
-win.geometry('1000x400')
+win.geometry('1020x400')
 
 
 
 #TOP FRAME
-frame_top = Frame(win,width=1000,height=20)
+frame_top = Frame(win,width=1020,height=20)
 frame_top.pack(side=TOP,fill=BOTH)
 
 
@@ -53,6 +98,8 @@ lb_Item_3=Label(frame_left,text='Item 3:')
 lb_Item_3.grid(sticky='w' ,row=3,column=0)
 lb_Item_4=Label(frame_left,text='Item 4:')
 lb_Item_4.grid(sticky='w' ,row=4,column=0)
+lb_count = Label(frame_left,text=f'Record count: {getTotalRecs()}')
+lb_count.grid(sticky='sw',row=10,column=0)
 
 # LEFT 1.st COLUMN
 txtOrdNr = Entry(frame_left,width=30,border=1)
@@ -90,17 +137,130 @@ txt_subtotal.grid(sticky='w',row=3,column=3)
 txt_total = Entry(frame_left,width=30,border=1)
 txt_total.grid(sticky='w',row=4,column=3)
 
-#Buttons
-btPrice=Button(frame_left,text='PRICE',command=None)
+# DB FUNCTIONS
+def cmdCreate():
+    def myInsertNew(cur):
+        cur.execute('''INSERT INTO  orders (ordNr,Item_1,Item_2,Item_3,Item_4,Costs,Tips,Tax,SubTotal,Total) 
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);''',(txtOrdNr.get(),txtItem1.get(),txtItem2.get(),txtItem3.get(),txtItem4.get(),txt_costs.get(),txt_tips.get(),txt_tax.get(),txt_subtotal.get(),txt_total.get()))
+    try:
+        connectDB(myInsertNew)
+        lb_count_refresh()
+        cmdRESET()
+        renewOrderCmb()
+        messagebox.showinfo(title="SAVED", message='Succesfully saved!')
+    except:
+        messagebox.showinfo(title="ERROR", message='Error!')
+
+def cmdDeleteALL():
+    def myDeleteAll(cur):
+        cur.execute('''DELETE FROM orders;''')
+    connectDB(myDeleteAll)
+    lb_count_refresh()
+    cmdRESET()
+
+def cmdDelete():
+    def myDeleteAll(cur):
+        cur.execute(f'''DELETE FROM orders WHERE ordNr LIKE '{txtOrdNr.get()}';''')
+    connectDB(myDeleteAll)
+    cmdRESET()
+    lb_count_refresh()
+
+
+def renewOrderCmb():
+    def fetchOrders(cur):
+        global output
+        cur.execute('''SELECT ordNr FROM orders ORDER BY ordNr ASC;''')
+        records=cur.fetchall()
+        output=()
+        for record in records:
+            cmbText=f'{record[0]}'
+            output+=(cmbText,)
+    connectDB(fetchOrders)
+    cmb['values']=output
+
+def fetchRecord(*arg):
+    def myFn(cur):
+        global rs
+        val = n.get()
+        cur.execute(f'''SELECT * FROM orders WHERE ordNr LIKE '{val}';''')
+        rs=cur.fetchall()
+        return rs
+    
+    connectDB(myFn)
+
+    txtOrdNr.delete(0,END)
+    txtOrdNr.insert(0,rs[0][1])
+    txtItem1.delete(0,END)
+    txtItem1.insert(0,rs[0][2])
+    txtItem2.delete(0,END)
+    txtItem2.insert(0,rs[0][3])
+    txtItem3.delete(0,END)
+    txtItem3.insert(0,rs[0][4])
+    txtItem4.delete(0,END)
+    txtItem4.insert(0,rs[0][5])
+    txt_costs.delete(0,END)
+    txt_costs.insert(0,rs[0][6])
+    txt_tips.delete(0,END)
+    txt_tips.insert(0,rs[0][7])
+    txt_tax.delete(0,END)
+    txt_tax.insert(0,rs[0][8])
+    txt_subtotal.delete(0,END)
+    txt_subtotal.insert(0,rs[0][9])
+    txt_total.delete(0,END)
+    txt_total.insert(0,rs[0][10])
+
+def cmdUpdate():
+    def checkRec(cur):
+        global ordExist
+        cur.execute(f'''SELECT count(id) FROM orders WHERE ordNr LIKE '{txtOrdNr.get()}';''')
+        ordExist = cur.fetchone()
+        return ordExist
+    connectDB(checkRec)
+
+    print(ordExist[0])
+    if int(ordExist[0])>0:
+        def myFn(cur):
+            cur.execute(f'''UPDATE orders SET 
+            ordNr='{txtOrdNr.get()}'
+            ,Item_1={txtItem1.get()}
+            ,Item_2={txtItem2.get()}
+            ,Item_3={txtItem3.get()}
+            ,Item_4={txtItem4.get()}
+            ,Costs={txt_costs.get()}
+            ,Tips={txt_tips.get()}
+            ,Tax={txt_tax.get()}
+            ,SubTotal={txt_subtotal.get()}
+            ,Total={txt_total.get()}
+            WHERE ordNr LIKE '{txtOrdNr.get()}';''')
+        connectDB(myFn)
+        messagebox.showinfo(title="UPDATED", message='Succesfully updated!')
+    else:
+        messagebox.showinfo(title="ERROR", message='This record doesnt exist!Please,create it first!')
+
+
+
+#   BUTTONS
+btPrice=Button(frame_left,text='CREATE',width=8,command=lambda:cmdCreate())
 btPrice.grid(row=5,column=0)
-btTOTAL=Button(frame_left,text='TOTAL',command=None)
+btTOTAL=Button(frame_left,text='TOTAL',width=8,command=lambda:btTotal())
 btTOTAL.grid(row=5,column=1)
-btRESET=Button(frame_left,text='RESET',command=cmdRESET)
+btRESET=Button(frame_left,text='RESET',width=8,command=cmdRESET)
 btRESET.grid(row=5,column=2)
-btFIND=Button(frame_left,text='FIND',command=None)
-btFIND.grid(row=5,column=3)
-btEXIT=Button(frame_left,text='EXIT',command=None)
+btDelete=Button(frame_left,text='DELETE',width=8,command=cmdDelete)
+btDelete.grid(row=5,column=3)
+btEXIT=Button(frame_left,text='EXIT',width=8,command=win.quit)
 btEXIT.grid(row=5,column=4)
+bdUpdate=Button(frame_left,text='UPDATE',width=8,command=lambda:cmdUpdate())
+bdUpdate.grid(row=6,column=0)
+bdDelAll=Button(frame_left,text='DELETE ALL',width=8,command=lambda:cmdDeleteALL())
+bdDelAll.grid(row=6,column=2)
+
+n=StringVar() 
+
+cmb = Combobox(frame_left,textvariable=n)  
+cmb.grid(row=7,column=0)
+renewOrderCmb()
+n.trace('w',fetchRecord)
 
 
 #RIGHT FRAME
@@ -186,25 +346,5 @@ myDevide.grid(row=5,column=4)
 
 btEq.grid(row=5,column=3)
 btClear.grid(row=5,column=1)
-
-# DB FUNCTIONS
-def connectDB(myFunc):
-    DB_HOST='abul.db.elephantsql.com'
-    DB_NAME='aphfgqzl'
-    DB_USER='aphfgqzl'
-    DB_PASS='E-XRiqulSIwntxQurDLibzk8EAeyalBZ'
-    DB_PORT=5432
-
-    conn=psycopg2.connect(dbname=DB_NAME,user=DB_USER,password=DB_PASS,host=DB_HOST,port=DB_PORT)
-    cur=conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-    # myFunc()
-    # cur.execute('''CREATE TABLE IF NOT EXISTS orders(id SERIAL,ordNr TEXT PRIMARY KEY,Item_1 TEXT,Item_2 TEXT,Item_3 TEXT,Item_4 TEXT,Costs FLOAT(2),Tips FLOAT(2),Tax FLOAT(2),SubTotal FLOAT(2),Total FLOAT(2));
-    # ''')
-    # cur.execute('''INSERT INTO  pols (name,surname) VALUES (%s,%s);''',(f_name.get(),uzv_surname.get()))
-
-    conn.commit()
-    conn.close()
-
 
 win.mainloop()
