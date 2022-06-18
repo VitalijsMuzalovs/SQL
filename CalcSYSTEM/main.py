@@ -51,15 +51,39 @@ def cmdRESET():
     txt_total.delete(0,END)
 
 def btTotal():
-    if txt_tips.get() is None: 
+    if len(txt_tips.get())==0 or float(txt_tips.get())==False: 
         txt_tips.delete(0,END)
-        txt_tips.insert(0,'0')
-        messagebox('OK','DB is empty!')
-    else:
-        txt_tips.delete(0,END)
-        txt_tips.insert(0,'0')
+        txt_tips.insert(0,0)
+    if len(txtItem1.get())==0 or float(txtItem1.get())==False: 
+        txtItem1.delete(0,END)
+        txtItem1.insert(0,0)
+    if len(txtItem2.get())==0 or float(txtItem2.get())==False: 
+        txtItem2.delete(0,END)
+        txtItem2.insert(0,0)
+    if len(txtItem3.get())==0 or float(txtItem3.get())==False: 
+        txtItem3.delete(0,END)
+        txtItem3.insert(0,0)
+    if len(txtItem4.get())==0 or float(txtItem4.get())==False: 
+        txtItem4.delete(0,END)
+        txtItem4.insert(0,0)
 
 
+    costs=float(txtItem1.get())+float(txtItem2.get())+float(txtItem3.get())+float(txtItem4.get())
+
+    txt_costs.delete(0,END)
+    txt_costs.insert(0,costs)
+
+    tax=float(costs*0.18)
+    txt_tax.delete(0,END)
+    txt_tax.insert(0,tax)
+
+    subtotal=costs+tax
+    txt_subtotal.delete(0,END)
+    txt_subtotal.insert(0,subtotal)
+
+    total=subtotal+float(txt_tips.get())
+    txt_total.delete(0,END)
+    txt_total.insert(0,total)
 
 
 win=Tk()
@@ -217,7 +241,7 @@ def cmdUpdate():
         return ordExist
     connectDB(checkRec)
 
-    print(ordExist[0])
+    # print(ordExist[0])
     if int(ordExist[0])>0:
         def myFn(cur):
             cur.execute(f'''UPDATE orders SET 
