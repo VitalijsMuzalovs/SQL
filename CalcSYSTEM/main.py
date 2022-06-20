@@ -7,6 +7,8 @@ import psycopg2
 
 
 def connectDB(myFunc):
+    ''' DB connection.Argument - is a function with query to be executed '''
+
     DB_HOST='abul.db.elephantsql.com'
     DB_NAME='aphfgqzl'
     DB_USER='aphfgqzl'
@@ -26,6 +28,7 @@ def connectDB(myFunc):
 
 
 def getTotalRecs():
+    ''' Function gets current record count'''
     def myFn(cur):
         global recCount
         cur.execute('''SELECT count(id) FROM orders ''')
@@ -35,10 +38,12 @@ def getTotalRecs():
     return recCount
 
 def lb_count_refresh():
+    '''Label refresh.Label shows current record count'''
     lb_count['text']=f'Record count: {getTotalRecs()}'
 
 
 def cmdRESET():
+    '''RESET button - clear all fields'''
     txtOrdNr.delete(0,END)
     txtItem1.delete(0,END)
     txtItem2.delete(0,END)
@@ -51,6 +56,8 @@ def cmdRESET():
     txt_total.delete(0,END)
 
 def btTotal():
+    ''' TOTAL button - calculates total price
+    Total price it is a costs (sum) of all items + tax 21% of all items + tips amount '''
     if len(txt_tips.get())==0 or float(txt_tips.get())==False: 
         txt_tips.delete(0,END)
         txt_tips.insert(0,0)
@@ -68,22 +75,22 @@ def btTotal():
         txtItem4.insert(0,0)
 
 
-    costs=float(txtItem1.get())+float(txtItem2.get())+float(txtItem3.get())+float(txtItem4.get())
+    costs=round(float(txtItem1.get())+float(txtItem2.get())+float(txtItem3.get())+float(txtItem4.get()),2)
 
     txt_costs.delete(0,END)
     txt_costs.insert(0,costs)
 
-    tax=float(costs*0.18)
+    tax=round(float(costs*0.21),2)
     txt_tax.delete(0,END)
     txt_tax.insert(0,tax)
 
-    subtotal=costs+tax
+    subtotal=round(costs+tax,2)
     txt_subtotal.delete(0,END)
     txt_subtotal.insert(0,subtotal)
 
     total=subtotal+float(txt_tips.get())
     txt_total.delete(0,END)
-    txt_total.insert(0,total)
+    txt_total.insert(0,round(total,2))
 
 
 win=Tk()
@@ -92,7 +99,9 @@ win.geometry('1020x400')
 
 
 
-#TOP FRAME
+#################
+### TOP FRAME ###
+#################
 frame_top = Frame(win,width=1020,height=20)
 frame_top.pack(side=TOP,fill=BOTH)
 
@@ -107,7 +116,9 @@ lbDate=Label(frame_top,text=fm_dt)
 lbDate.pack()
 
 
-#LEFT FRAME
+##################
+### LEFT FRAME ###
+##################
 frame_left = Frame(win,width=700,height=500)
 frame_left.pack(side=LEFT,fill=BOTH)
 
@@ -123,7 +134,7 @@ lb_Item_3.grid(sticky='w' ,row=3,column=0)
 lb_Item_4=Label(frame_left,text='Item 4:')
 lb_Item_4.grid(sticky='w' ,row=4,column=0)
 lb_count = Label(frame_left,text=f'Record count: {getTotalRecs()}')
-lb_count.grid(sticky='sw',row=10,column=0)
+lb_count.grid(sticky='sw',row=10,column=2)
 
 # LEFT 1.st COLUMN
 txtOrdNr = Entry(frame_left,width=30,border=1)
@@ -161,8 +172,9 @@ txt_subtotal.grid(sticky='w',row=3,column=3)
 txt_total = Entry(frame_left,width=30,border=1)
 txt_total.grid(sticky='w',row=4,column=3)
 
-# DB FUNCTIONS
+# QUERY FUNCTIONS
 def cmdCreate():
+    '''CREATE button - creates a new order. If it's allready exists => error occurs!'''
     def myInsertNew(cur):
         cur.execute('''INSERT INTO  orders (ordNr,Item_1,Item_2,Item_3,Item_4,Costs,Tips,Tax,SubTotal,Total) 
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);''',(txtOrdNr.get(),txtItem1.get(),txtItem2.get(),txtItem3.get(),txtItem4.get(),txt_costs.get(),txt_tips.get(),txt_tax.get(),txt_subtotal.get(),txt_total.get()))
@@ -176,6 +188,7 @@ def cmdCreate():
         messagebox.showinfo(title="ERROR", message='Error!')
 
 def cmdDeleteALL():
+    '''DELETE ALL button - deletes all orders from DB'''
     def myDeleteAll(cur):
         cur.execute('''DELETE FROM orders;''')
     connectDB(myDeleteAll)
@@ -183,6 +196,7 @@ def cmdDeleteALL():
     cmdRESET()
 
 def cmdDelete():
+    '''DELETE button - deletes current order (displayed in 'Order No' field)'''
     def myDeleteAll(cur):
         cur.execute(f'''DELETE FROM orders WHERE ordNr LIKE '{txtOrdNr.get()}';''')
     connectDB(myDeleteAll)
@@ -191,6 +205,7 @@ def cmdDelete():
 
 
 def renewOrderCmb():
+    '''Refreshes comboboxe's content (existing order's list)'''
     def fetchOrders(cur):
         global output
         cur.execute('''SELECT ordNr FROM orders ORDER BY ordNr ASC;''')
@@ -203,6 +218,7 @@ def renewOrderCmb():
     cmb['values']=output
 
 def fetchRecord(*arg):
+    '''Gets data of particular order'''
     def myFn(cur):
         global rs
         val = n.get()
@@ -234,6 +250,7 @@ def fetchRecord(*arg):
     txt_total.insert(0,rs[0][10])
 
 def cmdUpdate():
+    '''UPDATE button - update record,if it's exists.'''
     def checkRec(cur):
         global ordExist
         cur.execute(f'''SELECT count(id) FROM orders WHERE ordNr LIKE '{txtOrdNr.get()}';''')
@@ -264,30 +281,33 @@ def cmdUpdate():
 
 
 #   BUTTONS
-btPrice=Button(frame_left,text='CREATE',width=8,command=lambda:cmdCreate())
-btPrice.grid(row=5,column=0)
 btTOTAL=Button(frame_left,text='TOTAL',width=8,command=lambda:btTotal())
-btTOTAL.grid(row=5,column=1)
-btRESET=Button(frame_left,text='RESET',width=8,command=cmdRESET)
-btRESET.grid(row=5,column=2)
-btDelete=Button(frame_left,text='DELETE',width=8,command=cmdDelete)
-btDelete.grid(row=5,column=3)
-btEXIT=Button(frame_left,text='EXIT',width=8,command=win.quit)
-btEXIT.grid(row=5,column=4)
+btTOTAL.grid(row=5,column=0,pady=15)
+btPrice=Button(frame_left,text='CREATE',width=8,command=lambda:cmdCreate())
+btPrice.grid(row=5,column=1)
 bdUpdate=Button(frame_left,text='UPDATE',width=8,command=lambda:cmdUpdate())
-bdUpdate.grid(row=6,column=0)
+bdUpdate.grid(row=5,column=2)
+
+btRESET=Button(frame_left,text='RESET',width=8,command=cmdRESET)
+btRESET.grid(row=6,column=0)
+btDelete=Button(frame_left,text='DELETE',width=8,command=cmdDelete)
+btDelete.grid(row=6,column=1)
 bdDelAll=Button(frame_left,text='DELETE ALL',width=8,command=lambda:cmdDeleteALL())
 bdDelAll.grid(row=6,column=2)
+btEXIT=Button(frame_left,text='EXIT',width=8,command=win.quit)
+btEXIT.grid(row=6,column=3)
+
 
 n=StringVar() 
 
 cmb = Combobox(frame_left,textvariable=n)  
-cmb.grid(row=7,column=0)
+cmb.grid(row=7,column=2,pady=15)
 renewOrderCmb()
 n.trace('w',fetchRecord)
 
-
-#RIGHT FRAME
+###################
+### RIGHT FRAME ###
+###################
 frame_right = Frame(win,width=300,height=500)
 frame_right.pack(side=RIGHT,fill=BOTH)
 
@@ -370,5 +390,7 @@ myDevide.grid(row=5,column=4)
 
 btEq.grid(row=5,column=3)
 btClear.grid(row=5,column=1)
+lbDev=Label(frame_right,text='by Vitālijs Muzaļovs')
+lbDev.grid(row=6,columnspan=5,pady=15,sticky='se')
 
 win.mainloop()
